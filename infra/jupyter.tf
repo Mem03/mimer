@@ -4,6 +4,29 @@ resource "helm_release" "jupyter" {
   chart      = "jupyterhub" # We use the Hub chart to manage the Lab instance
   namespace  = kubernetes_namespace.mimer.metadata[0].name
   version    = var.jupyterhub_chart_version
+  values = [
+    <<-EOF
+    hub:
+      config:
+        JupyterHub:
+          tornado_settings:
+            headers:
+              Content-Security-Policy: "frame-ancestors 'self' ${var.portal_url}"
+    
+    # ADD THIS NEW SECTION BELOW 'hub'
+    singleuser:
+      extraFiles:
+        # This injects the security policy directly into the user's notebook server
+        jupyter_server_config.py:
+          mountPath: /etc/jupyter/jupyter_server_config.py
+          stringData: |
+            c.ServerApp.tornado_settings = {
+                "headers": {
+                    "Content-Security-Policy": "frame-ancestors 'self' ${var.portal_url}"
+                }
+            }
+    EOF
+  ]
 
   # Simplified for MVP: Single user mode
 set {
@@ -63,4 +86,15 @@ set {
     name  = "singleuser.extraEnv.PYSPARK_PYTHON"
     value = "/opt/conda/bin/python"
   }
+  
+  set {
+    name  = "singleuser.extraEnv.SPARK_CONF_EXTENSIONS"
+    value = "io.delta.sql.DeltaSparkSessionExtension"
+  }
+  
+  set {
+    name  = "singleuser.extraEnv.SPARK_CONF_CATALOG"
+    value = "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+  }
 }
+

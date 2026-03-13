@@ -51,6 +51,12 @@ variable "jupyter_dummy_password" {
   sensitive   = true
 }
 
+variable "portal_url" {
+  description = "The URL of the Next.js portal (used for Security Policies and CORS)"
+  type        = string
+  default     = "http://localhost:3000"
+}
+
 # ==========================================
 # MinIO Storage Settings
 # ==========================================
