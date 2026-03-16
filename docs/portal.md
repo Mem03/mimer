@@ -5,18 +5,30 @@ The Mimer Portal is a custom Next.js 15 application using the App Router. It ser
 ## 🏗️ Architecture
 
 The portal acts as a bridge between the user and the backend APIs:
-* **Storage SDK (`@aws-sdk/client-s3`):** Connects to MinIO to list databases, calculate table sizes, and execute secure deletion of Parquet/Delta files.
-* **Kubernetes SDK (`@kubernetes/client-node`):** Uses the local `~/.kube/config` to securely query the Minikube API. It tracks active Jupyter pods, container restart counts, and hardware allocations (CPU/Memory limits).
+
+* **Storage SDK (`@aws-sdk/client-s3`):** Connects to MinIO to list databases and calculate table sizes. It also performs "metadata surgery" on Delta Lake transaction logs to identify active Parquet files for the frontend.
+* **DuckDB-Wasm Integration:** An in-browser analytical database engine that queries Parquet files directly from MinIO. This allows for live, adaptive data previews without the overhead of a middleman API or database.
+* **Kubernetes SDK (`@kubernetes/client-node`):** Uses the local `~/.kube/config` to securely query the Minikube API. It tracks active Jupyter pods, container restart counts, and hardware allocations.
+
+
 
 ## 📂 Project Structure
 
 We follow strict DRY (Don't Repeat Yourself) principles and component modularity.
 
 * `src/app/page.tsx`: The Data Catalog home page.
-* `src/app/compute/page.tsx`: The Compute Clusters monitoring dashboard.
-* `src/app/layout.tsx`: Injects global fonts and the shared Sidebar navigation.
-* `src/components/`: Reusable React components (like the Sidebar).
+* `src/app/table/[name]/page.tsx`: Deep-dive table view with live metadata and data preview tabs.
+* `src/lib/duckdb.ts`: Logic for initializing the WASM worker and configuring S3/HTTPFS extensions for browser-side SQL.
+* `src/components/TablePreview.tsx`: The client-side component that executes DuckDB queries against the live storage.
 * `src/lib/`: Backend communication logic (`minio.ts`, `k8s.ts`, `config.ts`).
+
+## 📊 Live Data Preview Logic
+
+To ensure the UI is always **adaptable** and "live," we utilize a hybrid querying approach:
+1.  **Metadata Layer:** The server reads the Delta Lake `_delta_log` to determine the current state of a table (ignoring overwritten or stale Parquet files).
+2.  **Execution Layer:** The list of active files is passed to the browser, where DuckDB-Wasm fetches only the necessary bytes using HTTP Range Requests.
+
+
 
 ## 🎨 Design System
 
@@ -26,17 +38,9 @@ The application uses **Tailwind CSS**. All design tokens (colors, fonts, borders
 
 ## ⚙️ Environment Variables
 
-The portal relies on a strict `.env.local` file at the root of the `apps/portal` directory. **Do not commit this file to version control.**
+The portal relies on a strict `.env.local` file. **Do not commit this file to version control.**
 
-```env
-# MinIO / Storage
-MINIO_ENDPOINT="http://localhost:9000"
-MINIO_REGION="us-east-1"
-MINIO_ACCESS_KEY="admin"
-MINIO_SECRET_KEY="minio123"
-
-# Kubernetes / Compute
-K8S_NAMESPACE="mimer"
-```
+* `NEXT_PUBLIC_MINIO_ENDPOINT`: Browser-accessible endpoint for DuckDB.
+* `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`: Administrative keys for server-side S3 operations.
 
 *Note: Multi-tenant workspace configuration (e.g., selecting between the `raw-data` or `marketing-data` buckets) is managed centrally in `src/lib/config.ts`.*

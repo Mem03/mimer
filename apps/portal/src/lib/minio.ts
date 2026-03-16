@@ -3,7 +3,8 @@ import {
   S3Client, 
   ListObjectsV2Command, 
   ListBucketsCommand,
-  DeleteObjectCommand
+  DeleteObjectCommand,
+  GetObjectCommand
 } from "@aws-sdk/client-s3";
 
 
@@ -155,4 +156,78 @@ export async function deleteTable(bucketName: string, tableName: string) {
     console.error(`Error deleting table ${tableName}:`, error);
     throw new Error("Failed to delete table");
   }
+}
+
+export async function getDeltaActiveFiles(bucketName: string, tableName: string) {
+  try {
+    const command = new ListObjectsV2Command({ 
+      Bucket: bucketName, 
+      Prefix: `${tableName}/_delta_log/`,
+    });
+    const response = await s3Client.send(command);
+    const logFiles = response.Contents?.filter(f => f.Key?.endsWith('.json')) || [];
+    
+    // Sort to get the latest logs
+    logFiles.sort((a, b) => (a.Key! > b.Key! ? 1 : -1));
+
+    const activeFiles = new Set<string>();
+
+    for (const log of logFiles) {
+      const getObj = await s3Client.send(new GetObjectCommand({
+        Bucket: bucketName,
+        Key: log.Key
+      }));
+      const body = await getObj.Body?.transformToString();
+      if (!body) continue;
+
+      // Delta logs are JSONL (one JSON object per line)
+      const lines = body.split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const entry = JSON.parse(line);
+        if (entry.add) activeFiles.add(entry.add.path);
+        if (entry.remove) activeFiles.delete(entry.remove.path);
+      }
+    }
+
+    return Array.from(activeFiles).map(path => `s3://${bucketName}/${tableName}/${path}`);
+  } catch (error) {
+    console.error("Error parsing Delta log:", error);
+    return [];
+  }
+}
+
+export async function vacuumTable(bucketName: string, tableName: string) {
+  // 1. Get all physical files in the folder
+  const listCommand = new ListObjectsV2Command({ Bucket: bucketName, Prefix: `${tableName}/` });
+  const listResponse = await s3Client.send(listCommand);
+  const allPhysicalFiles = listResponse.Contents?.map(f => f.Key!) || [];
+
+  // 2. Get the active files (the ones the Delta log says we need)
+  const activeFilesFullPaths = await getDeltaActiveFiles(bucketName, tableName);
+  const activeKeys = new Set(activeFilesFullPaths.map(path => path.replace(`s3://${bucketName}/`, '')));
+
+  // 3. Identify files to delete (Physical files not in log and not active)
+  const filesToDelete = allPhysicalFiles.filter(key => {
+    const isLog = key.includes('_delta_log');
+    const isActive = activeKeys.has(key);
+    return !isLog && !isActive;
+  });
+
+  if (filesToDelete.length === 0) return { deletedCount: 0 };
+
+  // 4. Delete one-by-one to avoid Content-MD5 header issues
+  // We use Promise.all to run them in parallel for speed
+  await Promise.all(
+    filesToDelete.map((key) =>
+      s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        })
+      )
+    )
+  );
+
+  return { deletedCount: filesToDelete.length };
 }

@@ -48,3 +48,7 @@ npm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+
+# DuckDB WASM binaries
+apps/portal/public/duckdb-*.wasm
+apps/portal/public/duckdb-browser-*.js
