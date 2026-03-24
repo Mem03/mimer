@@ -7,7 +7,7 @@ description: Guidelines and best practices for writing Golang code in the Mimer 
 
 Use this skill when introducing a new high-performance backend component, migrating existing services (like Next.js API routes) to standalone microservices, or writing custom Kubernetes controllers in Go.
 
-## 🛠️ Framework Specifics & Best Practices
+## Framework Specifics & Best Practices
 
 The Mimer platform embraces Go for tasks that require high concurrency, low latency, or deep Kubernetes integration.
 

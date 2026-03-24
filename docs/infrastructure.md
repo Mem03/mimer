@@ -2,7 +2,7 @@
 
 This module provisions the underlying Kubernetes resources using Terraform and Helm. It creates the isolated environments needed for storage and compute.
 
-## 🏗️ Components
+## Components
 
 The infrastructure consists of three main pillars, all running inside a local Minikube cluster:
 
@@ -10,7 +10,7 @@ The infrastructure consists of three main pillars, all running inside a local Mi
 * **Compute Engine (Apache Spark):** Uses the Kubeflow Spark Operator to natively manage Spark applications on Kubernetes. Jupyter is configured to talk directly to this operator via a dedicated Service Account (`spark-sa`).
 * **Object Storage (MinIO):** A local, S3-compatible storage layer. It is configured to run in standalone mode with a minimal resource footprint (1 pod, low CPU/RAM) and automatically provisions a `raw-data` bucket for your Spark jobs to read and write from.
 
-## ⚙️ Prerequisites
+## Prerequisites
 
 To run this platform, ensure you have the following installed on your machine:
 * [Docker](https://www.docker.com/) (running the daemon)
@@ -18,14 +18,14 @@ To run this platform, ensure you have the following installed on your machine:
 * [Terraform](https://developer.hashicorp.com/terraform/downloads)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-## 🛠️ Configuration (`variables.tf`)
+## Configuration (`variables.tf`)
 All configurations are strictly centralized in the `variables.tf` file. We do not hardcode values in the main logic files. The file is organized into three sections:
 
 1. **Core Kubernetes Settings:** Manages namespaces and cluster connections.
 2. **JupyterHub & Spark Settings:** Controls chart versions, Docker images, admin users, and secure passwords.
 3. **MinIO Storage Settings:** Manages bucket names, resource limits, and secure access keys.
 
-## 🛑 Lifecycle Management
+## Lifecycle Management
 
 * **To pause the environment** and save RAM (keeps data intact): 
   ```bash

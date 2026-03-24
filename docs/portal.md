@@ -2,7 +2,7 @@
 
 The Mimer Portal is a custom Next.js 15 application using the App Router. It serves as the unified UI for the Lakehouse, replacing the need for engineers to constantly write CLI commands or check separate AWS/Kubernetes dashboards.
 
-## 🏗️ Architecture
+## Architecture
 
 The portal acts as a bridge between the user and the backend APIs:
 
@@ -12,7 +12,7 @@ The portal acts as a bridge between the user and the backend APIs:
 
 
 
-## 📂 Project Structure
+## Project Structure
 
 We follow strict DRY (Don't Repeat Yourself) principles and component modularity.
 
@@ -22,7 +22,7 @@ We follow strict DRY (Don't Repeat Yourself) principles and component modularity
 * `src/components/TablePreview.tsx`: The client-side component that executes DuckDB queries against the live storage.
 * `src/lib/`: Backend communication logic (`minio.ts`, `k8s.ts`, `config.ts`).
 
-## 📊 Live Data Preview Logic
+## Live Data Preview Logic
 
 To ensure the UI is always **adaptable** and "live," we utilize a hybrid querying approach:
 1.  **Metadata Layer:** The server reads the Delta Lake `_delta_log` to determine the current state of a table (ignoring overwritten or stale Parquet files).
@@ -30,13 +30,13 @@ To ensure the UI is always **adaptable** and "live," we utilize a hybrid queryin
 
 
 
-## 🎨 Design System
+## Design System
 
 The application uses **Tailwind CSS**. All design tokens (colors, fonts, borders) are centralized to ensure a consistent enterprise UI.
 * **Colors:** Defined in `tailwind.config.ts` under the `brand` object (e.g., `bg-brand-primary`).
 * **Fonts:** We use `next/font/google` (Inter) initialized in `layout.tsx` to prevent layout shifts.
 
-## ⚙️ Environment Variables
+## Environment Variables
 
 The portal relies on a strict `.env.local` file. **Do not commit this file to version control.**
 

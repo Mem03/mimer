@@ -7,7 +7,7 @@ description: Rules for managing and modifying the Terraform and Kubernetes infra
 
 This skill is invoked when modifying the underlying infrastructure definitions in the `infra/` folder.
 
-## 🛠️ Capabilities & Best Practices
+## Capabilities & Best Practices
 
 ### Modifying Terraform State
 * **Never use text modifications on `.tfstate` files.**

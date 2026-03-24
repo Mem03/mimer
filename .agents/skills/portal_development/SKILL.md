@@ -7,7 +7,7 @@ description: Advanced instructions for modifying the Mimer Portal (Next.js 15, R
 
 Use this skill when implementing complex UI elements, new pages, or interacting with the backend APIs via the `apps/portal` Control Plane.
 
-## 🛠️ Framework Specifics
+## Framework Specifics
 The modern Mimer portal requires adhering to Next.js App Router rules:
 
 ### Tailwind V4 Conventions
