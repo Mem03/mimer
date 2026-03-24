@@ -9,19 +9,19 @@ import {
 
 
 const s3Client = new S3Client({
-  // 1. Hard fallback to localhost if the env var is missing
-  endpoint: process.env.MINIO_ENDPOINT || "http://localhost:9000",
+  // Use the NEXT_PUBLIC_ prefix to match your Makefile/Next.js requirements
+  endpoint: process.env.NEXT_PUBLIC_MINIO_URL || "http://localhost:9000",
   
-  // 2. Force us-east-1. MinIO requires this by default locally
   region: process.env.MINIO_REGION || "us-east-1", 
   
   credentials: {
-    // 3. Fallbacks for credentials too
-    accessKeyId: process.env.MINIO_ACCESS_KEY || "admin",
-    secretAccessKey: process.env.MINIO_SECRET_KEY || "minio123",
+    accessKeyId: process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY || "admin",
+    secretAccessKey: process.env.NEXT_PUBLIC_MINIO_SECRET_KEY || "minio123",
   },
   
-  // 4. Critical for MinIO! Without this, it tries to route to bucket-name.localhost:9000
+  // Convert the string from .env to a boolean for the SDK
+  tls: process.env.NEXT_PUBLIC_MINIO_USE_SSL === "true", 
+
   forcePathStyle: true, 
 });
 

@@ -31,22 +31,34 @@ export async function initializeDuckDB() {
     return db;
 }
 
+// src/lib/duckdb.ts
+
 export async function configureS3(db: duckdb.AsyncDuckDB) {
     const conn = await db.connect();
     try {
-        // Only load httpfs - it's stable and always available
         await conn.query(`INSTALL httpfs; LOAD httpfs;`);
         
+        // 1. Strip 'http://' from the URL. DuckDB wants just the endpoint.
+        const rawUrl = process.env.NEXT_PUBLIC_MINIO_URL || 'localhost:9000';
+        const cleanEndpoint = rawUrl.replace('http://', '').replace('https://', '');
+
+        // 2. Ensure SSL is a literal true/false for the SQL query
+        const useSsl = process.env.NEXT_PUBLIC_MINIO_USE_SSL === 'true' ? 'true' : 'false';
+
         await conn.query(`
             CREATE SECRET (
                 TYPE S3,
-                KEY_ID '${process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY}',
-                SECRET '${process.env.NEXT_PUBLIC_MINIO_SECRET_KEY}',
-                ENDPOINT '${process.env.NEXT_PUBLIC_MINIO_ENDPOINT}',
+                KEY_ID '${process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY || 'admin'}',
+                SECRET '${process.env.NEXT_PUBLIC_MINIO_SECRET_KEY || 'minio123'}',
+                ENDPOINT '${cleanEndpoint}',
                 URL_STYLE 'path',
-                USE_SSL ${process.env.NEXT_PUBLIC_MINIO_USE_SSL}
+                REGION 'us-east-1',
+                USE_SSL ${useSsl}
             );
         `);
+        console.log("DuckDB S3 Secret Configured");
+    } catch (err) {
+        console.error("DuckDB S3 Config Failed:", err);
     } finally {
         await conn.close();
     }

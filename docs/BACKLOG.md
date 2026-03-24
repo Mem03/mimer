@@ -2,88 +2,100 @@
 
 This backlog is unstructured by design. Tasks can be picked up in any order based on current platform needs or engineering interest.
 
-## Observability & Monitoring (Prometheus)
+## Security & Identity (IAM)
+*Goal: Secure the control plane and ensure users only access authorized data and compute resources.*
+- [ ] **Identity Provider (IdP) Integration:** Deploy a centralized identity solution to manage users, groups, and standard authentication protocols (OAuth2/OIDC).
+- [ ] **Application Auth Integration:** Gate the Next.js portal behind the IdP to ensure session persistence and secure login.
+- [ ] **Fine-Grained RBAC/ABAC:** Implement an authorization layer (Policy-as-Code or Native RBAC) to restrict access to specific storage buckets and compute namespaces based on user roles.
+- [ ] **Secret Management:** Implement a secure vaulting solution to inject sensitive credentials (API keys, DB passwords) into workloads at runtime without exposing them in code.
+
+## Git Integration & CI/CD
+*Goal: Treat every pipeline, dashboard, and infrastructure component as code with automated versioning.*
+- [ ] **Integrated Version Control:** Provision a Git server to host platform code, transformation logic, and orchestration definitions.
+- [ ] **Portal-to-Git Sync:** Build a UI interface in the portal that allows users to commit, pull, and push changes to their notebooks or scripts directly.
+- [ ] **CI/CD Automation:** Set up an automation engine to trigger unit tests, data quality checks, and container builds upon code pushes.
+- [ ] **GitOps Deployment:** Implement a reconciliation loop that automatically syncs the desired state in Git with the live environment in the cluster.
+
+## Data Quality & Governance
+*Goal: Ensure the Lakehouse remains a "Source of Truth" by enforcing data contracts and tracking schema evolution.*
+- [ ] **Automated Data Validation:** Integrate a validation framework into pipelines to block "Bad Data" from progressing through storage layers based on predefined rules.
+- [ ] **Metadata & Schema Registry:** Implement a cataloging service to track table versions and provide a "Git-like" experience (branching/merging) for data assets.
+- [ ] **Schema Drift Detection:** Build a monitoring hook to alert engineering when source data structures change unexpectedly.
+- [ ] **Data Discovery UI:** Provide a searchable interface within the portal for users to find table descriptions, owners, and documentation.
+
+## Observability & Monitoring
 *Goal: Gain deep visibility into the cluster's health, resource consumption, and pipeline performance.*
-- [ ] **Deploy Prometheus & Grafana:** Add the `kube-prometheus-stack` Helm chart to the Terraform infrastructure.
-- [ ] **Kubernetes Metrics:** Configure dashboards to track CPU, RAM, and restart loops for Jupyter and Spark pods.
-- [ ] **Storage Metrics:** Expose MinIO's `/minio/v2/metrics/cluster` endpoint to Prometheus to track bucket sizes and API requests.
-- [ ] **Next.js Integration:** Embed a lightweight Grafana iframe or use Prometheus APIs to show live cluster health directly in the Mimer Portal Sidebar.
+- [ ] **Metrics Collection & Visualization:** Deploy a time-series database and dashboarding engine to track infrastructure health.
+- [ ] **Resource Tracking:** Configure dashboards to monitor compute resource usage and restart loops for all containerized workloads.
+- [ ] **Storage Telemetry:** Expose storage metrics to track bucket growth, throughput, and API request latency.
+- [ ] **Portal Health Integration:** Embed live cluster health status or resource metrics directly into the Mimer Portal sidebar via API.
 
 ## Custom Headless Code Editor
-*Goal: Replace the standard Jupyter UI with a proprietary, fully integrated Next.js coding experience.*
-- [ ] **The Editor Engine:** Install `@monaco-editor/react` in the Next.js portal to provide VS Code-level syntax highlighting and autocomplete.
-- [ ] **The Communication Bridge:** Implement `@jupyterlab/services` to establish a WebSocket connection between the Next.js frontend and the hidden Kubernetes Jupyter pod.
-- [ ] **Execution State:** Build a React component that sends `1+1` over the WebSocket and successfully renders `2` on the screen.
-- [ ] **Notebook Persistence:** Write logic to save the editor's state as a standard `.ipynb` JSON file directly back to a MinIO bucket.
+*Goal: Replace standard UIs with a proprietary, fully integrated web-based coding experience.*
+- [ ] **The Editor Engine:** Implement a browser-based code editor in the portal providing professional syntax highlighting and autocomplete.
+- [ ] **The Communication Bridge:** Establish a real-time connection (e.g., WebSockets) between the frontend and the backend compute kernels.
+- [ ] **Execution State:** Build the logic to send code snippets to the kernel and render the resulting output (text, tables, or charts) on screen.
+- [ ] **Persistence Layer:** Write logic to save editor state and notebook files directly to the object storage layer.
 
-## Orchestration & Scheduling (Dagster)
-*Goal: Move from manual notebook execution to automated, dependency-aware data pipelines.*
-- [ ] **Deploy Dagster:** Provision a Dagster instance inside the Minikube cluster using Helm.
-- [ ] **Asset Definition:** Write a basic Dagster pipeline (Python) that triggers a Spark job to read from `raw-data` and write to a `cleansed-data` bucket.
-- [ ] **Control Plane Integration:** Add a "Pipelines" tab to the Next.js portal that queries the Dagster GraphQL API to show recent run statuses (Success/Failure/Pending).
+## Orchestration & Scheduling
+*Goal: Move from manual execution to automated, dependency-aware data pipelines.*
+- [ ] **Workflow Engine:** Provision a workflow orchestrator to manage task dependencies and scheduling.
+- [ ] **Asset Definition:** Define pipelines that programmatically move data through the storage layers (e.g., Bronze/Silver/Gold).
+- [ ] **Control Plane Integration:** Add a "Pipelines" tab to the portal that interfaces with the orchestrator's API to show run history and logs.
 
 ## Streaming Data Architecture
 *Goal: Support real-time data ingestion alongside traditional batch processing.*
-- [ ] **Message Broker:** Deploy a lightweight Kafka or Redpanda pod to the cluster via Terraform.
-- [ ] **Producer Script:** Write a simple Python script to simulate streaming IoT or clickstream events into a topic.
-- [ ] **Spark Structured Streaming:** Create a PySpark job that continuously consumes the stream and appends it to a Delta Table in MinIO in near real-time.
-- [ ] **Unified batch and streaming data:** Allow for querying batch and streaming data in a unified table
+- [ ] **Message Broker:** Deploy a distributed messaging system to handle high-frequency event data.
+- [ ] **Stream Producer:** Create a mechanism to simulate or ingest real-time events into the message broker.
+- [ ] **Stream Processing:** Implement a compute job that continuously consumes the stream and writes to the Lakehouse in near real-time.
+- [ ] **Unified Storage:** Enable querying of both batch and streaming data within a single unified table format.
 
 ## Integrated AI Platform Agent
-*Goal: Bake LLM capabilities directly into the control plane to act as an autonomous data engineering assistant.*
-- [ ] **Data Understanding:** Pass Parquet/Delta schemas to an LLM to auto-generate SQL queries or natural language data summaries in the Data Catalog view.
-- [ ] **Log Troubleshooting:** Build a Next.js API route that pulls failed pod logs via the Kubernetes API, sends them to an LLM, and returns a human-readable "Root Cause & Fix" directly in the UI.
-- [ ] **Compute Management:** Use an LLM to analyze Prometheus metric history and recommend when to scale up a Spark cluster's CPU limits (or auto-terminate idle Jupyter pods).
+*Goal: Bake LLM capabilities into the control plane to act as an autonomous data engineering assistant.*
+- [ ] **Schema Intelligence:** Pass data schemas to an LLM to generate SQL or natural language summaries in the Data Catalog.
+- [ ] **Automated Troubleshooting:** Build a service that analyzes failed workload logs via LLM to return root cause analysis in the UI.
+- [ ] **Predictive Scaling:** Use intelligence to analyze metric history and recommend resource limit adjustments for compute clusters.
 
 ## Machine Learning (ML) Workloads
-*Goal: Prove the platform can handle end-to-end model training and serving.*
-- [ ] **Model Training:** Write a PySpark MLlib or Scikit-Learn notebook that trains a model using data pulled straight from MinIO.
-- [ ] **Model Registry:** Deploy MLflow (or just use MinIO as an artifact store) to track model versions, parameters, and accuracy metrics.
-- [ ] **Model Serving:** Create a lightweight FastAPI pod that loads the saved `.pkl` or ONNX model from MinIO and exposes a REST API for real-time inference.
+*Goal: Enable end-to-end model training, versioning, and serving.*
+- [ ] **Model Training:** Implement a workflow to train models using data pulled directly from the Lakehouse.
+- [ ] **Experiment Tracking:** Provision a registry to track model versions, parameters, and performance metrics.
+- [ ] **Model Serving:** Create a service to load saved models and expose them via REST API for real-time inference.
 
-## Lightweight Compute (DuckDB)
-*Goal: Provide a blazing-fast, single-node compute alternative to Spark for workloads that don't require heavy distributed processing.*
-- [ ] **Headless DuckDB Engine:** Deploy a containerized DuckDB server (or use it natively inside Python pods) to run complex analytical queries using a fraction of the RAM of Spark.
-- [ ] **MinIO Integration:** Configure DuckDB with the `httpfs` extension to read and write Parquet/CSV files directly from your local Lakehouse buckets.
-- [ ] **Jupyter Kernel:** Add a DuckDB SQL kernel to JupyterHub so analysts can write pure, high-speed SQL against MinIO without writing any PySpark boilerplate.
+## Lightweight Compute
+*Goal: Provide a fast, single-node compute alternative for smaller analytical workloads.*
+- [ ] **Embedded Analytical Engine:** Deploy a high-performance, local-first database engine for fast SQL execution without the overhead of distributed compute.
+- [ ] **Direct Storage Access:** Configure the engine to read and write common file formats directly from object storage.
+- [ ] **SQL-First Interface:** Allow analysts to write pure SQL against the Lakehouse via the portal or notebook environment.
 
-## Data Ingestion (Airbyte / Meltano)
-*Goal: Automate the extraction of data from external sources (databases, APIs) and load it into the `raw-data` bucket.*
-- [ ] **Deploy Ingestion Engine:** Add the Helm chart for an open-source EL (Extract, Load) tool like Airbyte or Meltano to the Kubernetes cluster.
-- [ ] **Sample Source Connection:** Configure a connector to pull data from a public API or a dummy PostgreSQL database.
-- [ ] **Lakehouse Destination:** Set up the tool to land the raw, un-transformed data directly into MinIO as Parquet files, ready for downstream processing.
+## Data Ingestion (EL)
+*Goal: Automate extraction from external sources into the raw-data layer.*
+- [ ] **Ingestion Engine:** Deploy an Extract-Load (EL) tool to manage connectors for databases and APIs.
+- [ ] **Source Connectivity:** Configure connectors for sample external data sources.
+- [ ] **Target Mapping:** Standardize the landing of raw data into object storage as optimized file formats.
 
-## Analytics Engineering (dbt)
-*Goal: Bring software engineering best practices (version control, testing, CI/CD) to your SQL data transformations.*
-- [ ] **dbt Core Setup:** Create a `dbt/` folder in the project to manage modular SQL transformations (the "T" in ELT).
-- [ ] **Adapter Configuration:** Connect dbt to either your Spark cluster (`dbt-spark`) or your DuckDB engine (`dbt-duckdb`) to execute the models.
-- [ ] **Data Quality Testing:** Write standard dbt tests (unique, not_null) for your bronze/silver/gold tables to automatically catch bad data before it hits the catalog.
-- [ ] **Next.js Integration:** Serve the auto-generated `dbt docs` static website via an iframe in the Next.js portal for a beautiful, interactive data lineage graph.
+## Analytics Engineering
+*Goal: Bring software engineering best practices to SQL transformations.*
+- [ ] **Modular Transformations:** Implement a framework to manage SQL transformations as modular, version-controlled units.
+- [ ] **Transformation Execution:** Connect the framework to the platform's compute engines (distributed or lightweight).
+- [ ] **Quality Testing:** Implement automated tests (uniqueness, null checks) to validate data at each transformation step.
+- [ ] **Lineage Visualization:** Serve documentation and relationship graphs within the portal to show how data flows between models.
 
-## BI as Code (Dashboards & Reporting)
-*Goal: Replace click-and-drag BI tools with version-controlled, code-defined dashboards and metrics.*
-- [ ] **Evaluate BI Framework:** Choose an open-source BI-as-code tool (e.g., Rill Data, Lightdash, Evidence.dev, or Streamlit) to deploy alongside the control plane.
-- [ ] **Define Metrics Layer:** Create a semantic layer using SQL/YAML to define core business metrics (e.g., Daily Active Users, Total Revenue) directly from the MinIO Parquet files.
-- [ ] **Build Code-Driven Dashboard:** Write the code to generate an interactive dashboard that automatically updates when the underlying repository or dbt models change.
-- [ ] **Portal Embedding:** Embed the compiled dashboards securely into the Next.js Control Plane so users don't have to leave the Mimer application to see their data.
-
-## Agentic Framework for Custom Data Agents
-*Goal: Provide an environment where users can build, deploy, and converse with autonomous AI agents equipped with tools to directly interact with Lakehouse data.*
-- [ ] **Data Tool-Calling (Function Calling):** Integrate an agent framework (like LangChain, LlamaIndex, or Vercel AI SDK) and build strict tools for the LLM (e.g., `execute_duckdb_sql`, `list_minio_files`, `trigger_dagster_job`).
-- [ ] **Agent Builder UI:** Create a portal interface where users can define a custom agent, write its system prompt, and select which specific tools and MinIO buckets it is allowed to access.
-- [ ] **Interactive Chat UI:** Build a conversational interface in the Next.js portal where users can ask complex questions ("Why did sales drop yesterday?") and watch the agent autonomously chain together SQL queries and Python scripts to find the answer.
-- [ ] **RAG (Retrieval-Augmented Generation):** Deploy a lightweight vector store (like ChromaDB, Qdrant, or pgvector) so your agents can index and search through unstructured data, PDFs, or historical Slack logs stored in the Lakehouse.
+## BI as Code
+*Goal: Replace manual dashboarding with version-controlled, code-defined metrics.*
+- [ ] **Code-Driven Visualization:** Implement a framework that renders dashboards based on code definitions rather than drag-and-drop.
+- [ ] **Metrics Layer:** Define a semantic layer to standardize business logic (e.g., "Revenue") across all reports.
+- [ ] **Embedded Analytics:** Integrate these dashboards into the Next.js portal to provide a unified user experience.
 
 ## Data Lineage & Developer Experience (DX)
-*Goal: Remove boilerplate code from notebooks and automatically track how data flows and transforms across the platform.*
-- [ ] **Spark Session Auto-Initialization:** Configure the Jupyter IPython kernel profile with a startup script (`~/.ipython/profile_default/startup/`) to automatically build and inject the `spark` variable into the global namespace upon boot.
-- [ ] **Automated Data Lineage:** Install an open-source lineage agent (like OpenLineage or Spline) and attach its Spark listener to the auto-initialized Spark Session to capture execution plans silently.
-- [ ] **Lineage Graph UI:** Deploy the Lineage UI (or embed it within the Next.js portal) to visually track which Spark notebook or Dagster pipeline produced which specific Delta table in MinIO.
+*Goal: Automate metadata capture and remove boilerplate from the developer workflow.*
+- [ ] **Compute Auto-Initialization:** Configure the compute environment to automatically inject necessary libraries and session variables upon startup.
+- [ ] **Passive Lineage Capture:** Implement listeners to capture data lineage and execution plans silently during job execution.
+- [ ] **Lineage Explorer:** Build or deploy a UI to visually trace the flow of data from source to destination across the platform.
 
-
-# Done and dusted
-## Data Previewer
-*Goal: View the actual contents of the Lakehouse directly from the web browser.*
-- [x] Install `duckdb` and `duckdb-wasm` in the Next.js portal.
-- [x] Configure DuckDB to authenticate with MinIO using the centralized `.env` credentials.
-- [ ] Build a `<DataGrid>` component on the Table Details page to run `SELECT * LIMIT 50` on Parquet files.
+## Environment Management & Isolation
+*Goal: Provide safe, isolated stages for development, testing, and production to prevent experimental code from impacting live data.*
+- [ ] **Infrastructure Templating:** Create a reusable infrastructure-as-code pattern to spin up identical mirrors of the platform (Dev/Staging/Prod) within the cluster.
+- [ ] **Namespace Isolation:** Implement logical separation at the cluster level to ensure compute resources in "Dev" cannot consume or interfere with "Prod" resources.
+- [ ] **Data Environment Parity:** Establish a strategy for "Data Cloning" or "Zero-Copy Linking" so developers can test pipelines against realistic data samples without duplicating massive datasets.
+- [ ] **Configuration Management:** Implement a system to manage environment-specific variables (e.g., different storage endpoints or compute limits) across the platform lifecycle.

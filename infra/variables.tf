@@ -106,3 +106,41 @@ variable "minio_secret_key" {
   default   = "minio123"
   sensitive = true
 }
+
+# ==========================================
+# Monitoring Settings (VictoriaMetrics & Grafana)
+# ==========================================
+variable "monitoring_namespace" {
+  description = "Namespace for VictoriaMetrics and Grafana"
+  type        = string
+  default     = "monitoring"
+}
+
+variable "vm_retention_period" {
+  description = "How long VictoriaMetrics keeps data (e.g. 14d)"
+  type        = string
+  default     = "14d"
+}
+
+variable "grafana_admin_password" {
+  description = "Password for Grafana UI"
+  type        = string
+  sensitive   = true
+  default     = "admin"
+}
+
+# ==========================================
+# Scraper & Port Settings
+# ==========================================
+
+variable "minio_service_port_name" {
+  type        = string
+  description = "The name of the port in the MinIO service definition"
+  default     = "http" # Matches source 
+}
+
+variable "jupyter_notebook_port_name" {
+  type        = string
+  description = "The name of the port for spawned user kernels"
+  default     = "notebook-port" # Standard for jupyterhub chart 
+}
