@@ -5,14 +5,16 @@ Welcome, AI Agent! You are working on the **Mimer Data Platform**. The goal of t
 **CRITICAL SCOPE:** This repository is STRICTLY for building the platform itself. You are NOT to write any PySpark jobs, data processing pipelines, or data analysis scripts. Focus only on infrastructure setup and the interactive portal.
 
 ## 🏗️ Architecture & Setup
-You must understand the "Holy Trinity" structure of this repository:
+You must understand the **four-pillar** structure of this repository:
 1. **Storage (`infra/minio.tf`)**: MinIO S3-compatible storage.
 2. **Compute (`infra/jupyter.tf`, `infra/spark.tf`)**: Kubernetes (Minikube) cluster running JupyterHub and the Spark Operator.
 3. **Control Plane (`apps/portal/`)**: A custom Next.js web portal communicating with the K8s API and MinIO.
+4. **Observability (`infra/monitoring.tf`, `apps/metrics-api/`)**: VictoriaMetrics (headless, no Grafana) collects telemetry. A Go microservice on port `8081` exposes it via a dual-purpose API (Recharts UI + AI Orchestrator flat schema).
 
 ### Tech Stack
 * **Infrastructure (`infra/`)**: Terraform (primary), Helm, Kubernetes.
 * **Portal (`apps/portal/`)**: Next.js (App Router), React 19, TypeScript (primary), Tailwind CSS v4.
+* **Metrics API (`apps/metrics-api/`)**: Go (`net/http`, stdlib-only). See `.agents/skills/backend_golang/SKILL.md` for the AI-first API design pattern (flat schema, status enums, `actions[]`).
 * **Backend/Extensions**: Golang. Use Go when adding new high-performance microservices, custom Kubernetes operators, or backend APIs where relevant.
 * **Scripts**: `Makefile` at the root and in `apps/portal/`.
 
@@ -22,7 +24,9 @@ You must understand the "Holy Trinity" structure of this repository:
 * **Read Context:** Always read this `AGENTS.md` and check `docs/` before making architectural decisions.
 * **Keep Knowledge Updated:** When introducing a new tool, migrating to a new language (e.g., from Node to Go), or heavily refactoring, you MUST update the relevant `.agents/skills/SKILL.md` files, `README.md`, and `docs/` to reflect these changes before concluding your work.
 * **Use TypeScript:** When editing the `apps/portal`, always provide strict type definitions. Do not use `any`.
-* **Handle Secrets Securely:** Use Kubernetes Secrets for deployed services and `.env` files for the local Next.js portal. **NEVER** hardcode credentials or tokens in the codebase.
+* **Handle Secrets Securely:** Use Kubernetes Secrets for deployed services and `.env` files for the local Next.js portal. **NEVER** hardcode credentials, tokens, or environment-specific URLs/ports in the codebase.
+* **Prioritize Portability:** All services must be dynamic and portable. Use environment variables for endpoints, ports, and external service URLs.
+* **AI Readiness:** Design APIs and data structures with AI consumption in mind. Prefer flat schemas, clear status enums, and explicit `actions[]` arrays where applicable (e.g., for orchestrator integration).
 * **Follow Existing Workflows:** If the user asks you to perform a task covered by a file in `.agents/workflows/`, you must read that workflow file first and follow its exact steps.
 * **Run Validations:** When writing Terraform, validate it. When writing frontend code, keep it lint-free.
 * **Be Specific:** Create detailed and isolated components in the UI rather than huge monolythic files. 
@@ -30,9 +34,10 @@ You must understand the "Holy Trinity" structure of this repository:
 ### ❌ What You CANNOT Do
 * **DO NOT write data pipelines.** No PySpark, no data processing scripts. This repo is for building the platform, not using it.
 * **DO NOT** modify `.tfstate` files directly. Terraform state is managed by the Terraform binary.
-* **DO NOT** bypass the `Makefile`. If a command exists in the Makefile (e.g., `make up`, `make dev`), use it instead of typing out long Docker/Kubernetes commands natively.
-* **DO NOT** use default, generic hex colors or plain CSS in the portal. Use Tailwind utility classes and stick to a modern aesthetic. 
+* **DO NOT** bypass the `Makefile`. If a command exists in the Makefile (e.g., `make up`, `make dev`, `make api`), use it instead of typing out long Docker/Kubernetes/Go commands natively.
+* **DO NOT** use default, generic hex colors or plain CSS in the portal. Use Tailwind utility classes and stick to a modern aesthetic.
 * **DO NOT** hallucinate Kubernetes Kubeconfig contexts. Assume the environment is local Minikube unless explicitly told otherwise.
+* **DO NOT** be alarmed by `[DEP0169] url.parse()` deprecation warnings in the Next.js dev server. This is an upstream issue in `@kubernetes/client-node` and does not affect functionality.
 
 ## 🛠️ Workflows
 Agent-specific standard operating procedures are located in `.agents/workflows/`. Use the `view_file` tool to read them when prompted by the user to perform standard tasks.

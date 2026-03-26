@@ -15,9 +15,17 @@ This document outlines the "Holy Trinity" structure of the Mimer Data Platform a
 - **Networking:** The Spark Operator creates driver and executor pods dynamically that need internal access to MinIO to read/write Parquet/Delta files.
 
 ## 3. Control Plane (Portal & Extensions)
-- **Role:** The custom interactive Next.js web portal and high-performance Go extensions that govern the platform.
-- **Location:** `apps/portal/` and prospective Go microservices.
-- **Networking:** The portal interacts with the Kubernetes API to monitor jobs and communicates with MinIO to display the data catalog and lakehouse state.
+- **Role:** The custom interactive Next.js web portal and high-performance Go microservices that govern the platform.
+- **Location:** `apps/portal/` for the UI; `apps/metrics-api/` for the Go Metrics API.
+- **Networking:** The portal fetches metrics from the Go Metrics API at `http://localhost:8081`. The API in turn proxies PromQL to VictoriaMetrics at `http://localhost:8428`.
+
+## 4. Monitoring Layer (VictoriaMetrics + Go Metrics API)
+- **Role:** Collects infrastructure telemetry and exposes it via a dual-purpose API — rich charts for the portal UI and a flat, agent-readable schema for AI Orchestrators.
+- **Infrastructure:** Defined in `infra/monitoring.tf`. Deploys the `victoria-metrics-k8s-stack` Helm chart into the `monitoring` namespace. Scrapers are configured for MinIO, JupyterHub, and Jupyter kernel pods.
+- **API (`apps/metrics-api/`):** A Go microservice (`net/http`, stdlib only) on port `8081`. Exposes named queries (`?type=memory_pressure|storage_growth|efficiency`) with flat JSON responses including `status` enums and `actions[]` for remediation.
+- **Networking:**
+  - **Internal (Within K8s):** `vmsingle-vm-stack-victoria-metrics-k8s-stack.monitoring.svc.cluster.local:8429`
+  - **External (Local Machine):** `make tunnel` port-forwards VictoriaMetrics to `localhost:8428`. The Go API reads from this.
 
 ## Security & Core Assumptions
 - The environment relies on a local Minikube context unless stated otherwise.

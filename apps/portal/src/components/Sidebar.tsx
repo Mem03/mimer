@@ -2,11 +2,17 @@ import Link from "next/link";
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 bg-brand-dark text-slate-300 flex flex-col border-r border-slate-800">
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 font-semibold text-white tracking-wide">
-        Mimer Platform
+    <aside className="w-64 bg-brand-dark text-slate-700 flex flex-col border-r border-slate-800">
+      <div className="h-16 flex items-center px-5 border-b border-slate-800 gap-2.5">
+        <div className="w-7 h-7 rounded-md bg-brand-primary flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <div>
+          <p className="text-l text-slate-400 font-bold text-sm leading-none tracking-wide">Mimer</p>
+          <p className="text-slate-400 text-xs leading-none mt-1">Data Platform</p>
+        </div>
       </div>
-      
+
       <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8">
         <div>
           <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
@@ -40,7 +46,21 @@ export default function Sidebar() {
               </Link>
             </li>
           </ul>
-        </div>            
+        </div>
+
+        <div>
+          <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+            Platform Health
+          </h3>
+          <ul className="space-y-1 text-sm">
+            <li>
+              <Link href="/monitoring" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-slate-800 hover:text-white transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                Monitoring
+              </Link>
+            </li>
+          </ul>
+        </div>
       </nav>
     </aside>
   );

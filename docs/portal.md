@@ -18,6 +18,8 @@ We follow strict DRY (Don't Repeat Yourself) principles and component modularity
 
 * `src/app/page.tsx`: The Data Catalog home page.
 * `src/app/table/[name]/page.tsx`: Deep-dive table view with live metadata and data preview tabs.
+* `src/app/monitoring/page.tsx`: Platform Health monitoring dashboard (Recharts + AI Advisory panel).
+* `src/components/MonitoringDashboard.tsx`: Client component — fetches from the Go Metrics API (`http://localhost:8081`) and renders KPI cards, a memory pressure bar chart, and an AI action advisory for each metric.
 * `src/lib/duckdb.ts`: Logic for initializing the WASM worker and configuring S3/HTTPFS extensions for browser-side SQL.
 * `src/components/TablePreview.tsx`: The client-side component that executes DuckDB queries against the live storage.
 * `src/lib/`: Backend communication logic (`minio.ts`, `k8s.ts`, `config.ts`).
@@ -44,3 +46,10 @@ The portal relies on a strict `.env.local` file. **Do not commit this file to ve
 * `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY`: Administrative keys for server-side S3 operations.
 
 *Note: Multi-tenant workspace configuration (e.g., selecting between the `raw-data` or `marketing-data` buckets) is managed centrally in `src/lib/config.ts`.*
+
+## Monitoring & Metrics Integration
+
+The portal consumes the **Go Metrics API** (`apps/metrics-api/`) at `http://localhost:8081` for all monitoring data. This API:
+- Abstracts raw PromQL behind named query types (`?type=memory_pressure|storage_growth|efficiency`).
+- Returns flat JSON with `status` enums (`HEALTHY/WARNING/CRITICAL`) and `actions[]` fields for AI orchestrators.
+- Must be running via `make api` or `make dev` for the Monitoring page to load data.

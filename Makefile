@@ -27,22 +27,30 @@ tunnel:
 	@kubectl port-forward -n monitoring svc/vmsingle-vm-stack-victoria-metrics-k8s-stack 8428:8429 > /dev/null 2>&1 &
 	@echo "✅ Tunnels active: Jupyter (8080), MinIO UI (9001), MinIO API (9000)"
 
-# 4. Start the Next.js Portal
+# 4. Start the Go Metrics API
+api:
+	@echo "🚀 Starting Metrics API on port 8081..."
+	@cd apps/metrics-api && /opt/homebrew/bin/go run main.go &
+
+# 5. Start the Next.js Portal
 ui:
 	cd apps/portal && npm run dev
 
-# 5. Combined Dev Mode (The 'I want to work' command)
-# This starts the UI and ensures tunnels are open
+# 6. Combined Dev Mode (The 'I want to work' command)
+# This starts the UI, API, and ensures tunnels are open
 dev:
 	@make tunnel
+	@make api
 	@make ui
 
-# 6. Maintenance (Stops minikube and kills tunnels)
+# 7. Maintenance (Stops minikube and kills tunnels)
 stop:
 	@pkill -f "port-forward" || true
+	@pkill -f "go run main.go" || true
+	@pkill -f "metrics-api" || true
 	minikube stop
 
-# 7. Cleanup (Destroys infra and deletes minikube cluster)
+# 8. Cleanup (Destroys infra and deletes minikube cluster)
 destroy:
 	cd infra && terraform destroy -auto-approve
 	minikube delete
