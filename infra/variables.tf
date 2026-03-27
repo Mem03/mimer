@@ -83,7 +83,7 @@ variable "minio_bucket" {
 
 variable "persistence_enabled" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "minio_mem_request" {

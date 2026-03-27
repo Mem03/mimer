@@ -39,6 +39,10 @@ resource "helm_release" "victoria_metrics" {
             requests = { cpu = "50m", memory = "64Mi" }
           }
         }
+        # Add these to tell vmagent to scrape the cluster infrastructure!
+        config = {
+          kubernetes_sd_configs = [{ role = "node" }, { role = "pod" }]
+        }
       }
     })
   ]
