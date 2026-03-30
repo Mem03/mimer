@@ -6,11 +6,12 @@ import {
   DeleteObjectCommand,
   GetObjectCommand
 } from "@aws-sdk/client-s3";
+import { PLATFORM_CONFIG } from "./config";
 
 
 const s3Client = new S3Client({
-  // Use the NEXT_PUBLIC_ prefix to match your Makefile/Next.js requirements
-  endpoint: process.env.NEXT_PUBLIC_MINIO_URL || "http://localhost:9000",
+  // Use the PLATFORM_CONFIG which centralizes environment variable access
+  endpoint: PLATFORM_CONFIG.minioUrl,
   
   region: process.env.MINIO_REGION || "us-east-1", 
   

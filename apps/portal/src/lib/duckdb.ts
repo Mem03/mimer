@@ -1,11 +1,6 @@
-import * as duckdb from '@duckdb/duckdb-wasm';
-
-// 1. Define a consistent version for the WASM bundles
-const DUCKDB_VERSION = '1.28.0'; 
-const CDN_BASE = `https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@${DUCKDB_VERSION}/dist/`;
-
 // src/lib/duckdb.ts
 import * as duckdb from '@duckdb/duckdb-wasm';
+import { PLATFORM_CONFIG } from './config';
 
 export async function initializeDuckDB() {
     const BUNDLES: duckdb.DuckDBBundles = {
@@ -39,8 +34,7 @@ export async function configureS3(db: duckdb.AsyncDuckDB) {
         await conn.query(`INSTALL httpfs; LOAD httpfs;`);
         
         // 1. Strip 'http://' from the URL. DuckDB wants just the endpoint.
-        const rawUrl = process.env.NEXT_PUBLIC_MINIO_URL || 'localhost:9000';
-        const cleanEndpoint = rawUrl.replace('http://', '').replace('https://', '');
+        const cleanEndpoint = PLATFORM_CONFIG.minioUrl.replace('http://', '').replace('https://', '');
 
         // 2. Ensure SSL is a literal true/false for the SQL query
         const useSsl = process.env.NEXT_PUBLIC_MINIO_USE_SSL === 'true' ? 'true' : 'false';
@@ -49,7 +43,7 @@ export async function configureS3(db: duckdb.AsyncDuckDB) {
             CREATE SECRET (
                 TYPE S3,
                 KEY_ID '${process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY || 'admin'}',
-                SECRET '${process.env.NEXT_PUBLIC_MINIO_SECRET_KEY || 'minio123'}',
+                SECRET '${process.env.NEXT_PUBLIC_MINIO_SECRET_KEY}',
                 ENDPOINT '${cleanEndpoint}',
                 URL_STYLE 'path',
                 REGION 'us-east-1',

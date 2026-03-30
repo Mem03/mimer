@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Activity, Database, Server, AlertTriangle, Bot, HardDrive } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
+import { WORKSPACE_CONFIG, PLATFORM_CONFIG } from "@/lib/config";
+
 type MetricItem = {
   name: string;
   usage: string;
@@ -42,7 +44,7 @@ export default function MonitoringDashboard() {
     async function fetchMetrics() {
       try {
         const fetchAPI = async (type: string) => {
-          const res = await fetch(`http://localhost:8081/api/metrics?type=${type}`);
+          const res = await fetch(`${PLATFORM_CONFIG.metricsApiUrl}/api/metrics?type=${type}`);
           if (!res.ok) throw new Error("Network response was not ok");
           const data: MetricsResponse = await res.json();
           return data.metrics || [];

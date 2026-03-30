@@ -16,12 +16,14 @@ build-api:
 
 # 3. Sync Terraform outputs to Next.js .env
 sync-env:
-	@echo "🔄 Syncing infra..."
+	@echo "🔄 Syncing infra config and secrets to Portal..."
 	@echo "NEXT_PUBLIC_MINIO_URL=$(shell cd infra && terraform output -raw minio_external_url)" > apps/portal/.env.local
 	@echo "NEXT_PUBLIC_VM_URL=$(shell cd infra && terraform output -raw vm_external_url)" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_JUPYTER_URL=$(shell cd infra && terraform output -raw jupyter_external_url)" >> apps/portal/.env.local
-	@echo "NEXT_PUBLIC_MINIO_ACCESS_KEY=admin" >> apps/portal/.env.local
-	@echo "NEXT_PUBLIC_MINIO_SECRET_KEY=minio123" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_METRICS_API_URL=$(shell cd infra && terraform output -raw metrics_api_external_url)" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_MINIO_ACCESS_KEY=$(shell cd infra && terraform output -raw minio_access_key)" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_MINIO_SECRET_KEY=$(shell cd infra && terraform output -raw minio_secret_key)" >> apps/portal/.env.local
+	@echo "JUPYTER_PASSWORD=$(shell cd infra && terraform output -raw jupyter_password)" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_MINIO_USE_SSL=false" >> apps/portal/.env.local
     
 # 4. Smart Tunneling (Silently runs in the background, no sudo needed)

@@ -4,3 +4,9 @@ export const WORKSPACE_CONFIG = {
   bucket: "raw-data",
   namespace: "mimer",
 };
+
+export const PLATFORM_CONFIG = {
+  minioUrl: process.env.NEXT_PUBLIC_MINIO_URL || "http://localhost:9000",
+  jupyterUrl: process.env.NEXT_PUBLIC_JUPYTER_URL || "http://localhost:8080",
+  metricsApiUrl: process.env.NEXT_PUBLIC_METRICS_API_URL || "http://localhost:8081",
+};

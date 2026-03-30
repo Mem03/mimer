@@ -1,3 +1,5 @@
+import { PLATFORM_CONFIG } from "@/lib/config";
+
 export default function JupyterPage() {
   return (
     <div className="h-full w-full flex flex-col">
@@ -9,7 +11,7 @@ export default function JupyterPage() {
       {/* The iframe embedding your local Jupyter tunnel */}
       <div className="flex-1 bg-slate-100">
         <iframe 
-          src="http://localhost:8080" 
+          src={PLATFORM_CONFIG.jupyterUrl + "/hub/spawn"} 
           className="w-full h-full border-none"
           title="Jupyter Notebook"
         />
