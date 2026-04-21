@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "25.4.0",
-    "@types/react": "19.2.14",
+    "@types/react": "^19.2.14",
     "autoprefixer": "^10.4.27",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",

@@ -52,3 +52,8 @@ npm-debug.log*
 # DuckDB WASM binaries
 apps/portal/public/duckdb-*.wasm
 apps/portal/public/duckdb-browser-*.js
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class

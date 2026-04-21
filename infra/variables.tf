@@ -47,7 +47,6 @@ variable "jupyter_admin_users" {
 variable "jupyter_dummy_password" {
   type        = string
   description = "The password used to log into the JupyterHub environment"
-  default     = "mimer2026"
   sensitive   = true
 }
 
@@ -83,7 +82,7 @@ variable "minio_bucket" {
 
 variable "persistence_enabled" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "minio_mem_request" {
@@ -97,14 +96,14 @@ variable "minio_cpu_request" {
 }
 
 variable "minio_access_key" {
-  type    = string
-  default = "admin"
+  type        = string
+  description = "The access key for MinIO"
 }
 
 variable "minio_secret_key" {
-  type      = string
-  default   = "minio123"
-  sensitive = true
+  type        = string
+  description = "The secret key for MinIO"
+  sensitive   = true
 }
 
 # ==========================================
@@ -126,7 +125,6 @@ variable "grafana_admin_password" {
   description = "Password for Grafana UI"
   type        = string
   sensitive   = true
-  default     = "admin"
 }
 
 # ==========================================

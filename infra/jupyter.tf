@@ -29,14 +29,14 @@ resource "helm_release" "jupyter" {
   ]
 
   # Simplified for MVP: Single user mode
-set {
-  name  = "singleuser.image.name"
-  value = var.jupyter_image_name
-}
-set {
-  name  = "singleuser.image.tag"
-  value = var.jupyter_image_tag
-}
+  set {
+    name  = "singleuser.image.name"
+    value = "jupyter/pyspark-notebook"
+  }
+  set {
+    name  = "singleuser.image.tag"
+    value = "latest"
+  }
 
   # Allow Jupyter to talk to the Spark Operator
   set {
@@ -60,12 +60,27 @@ set {
   }
 
   set {
+    name  = "hub.config.Spawner.auto_spawn"
+    value = "true"
+  }
+
+  set {
+    name  = "hub.config.JupyterHub.default_url"
+    value = "/lab"
+  }
+
+  set {
+    name  = "hub.config.JupyterHub.spawner_class"
+    value = "kubespawner.KubeSpawner"
+  }
+
+  set {
     name  = "singleuser.profileList[0].display_name"
     value = "Spark Environment"
   }
   set {
-    name  = "singleuser.profileList[0].description"
-    value = "PySpark\\, Java\\ and S3 Connectors"
+    name  = "singleuser.profileList[0].slug"
+    value = "spark-environment"
   }
   set {
     name  = "singleuser.profileList[0].kubespawner_override.image"

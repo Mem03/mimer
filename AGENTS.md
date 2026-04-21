@@ -39,5 +39,22 @@ You must understand the **four-pillar** structure of this repository:
 * **DO NOT** hallucinate Kubernetes Kubeconfig contexts. Assume the environment is local Minikube unless explicitly told otherwise.
 * **DO NOT** be alarmed by `[DEP0169] url.parse()` deprecation warnings in the Next.js dev server. This is an upstream issue in `@kubernetes/client-node` and does not affect functionality.
 
+### 🔄 Decision-Making Protocol
+- **Always Ask for User Input:**
+  - If a task can be implemented using multiple tools, languages, or infrastructure approaches (e.g., Go vs. TypeScript, Kubernetes vs. Docker Compose, or MinIO vs. AWS S3), you **MUST** pause and ask the user for a decision before proceeding.
+  - Example scenarios:
+    - Choosing a programming language for a new microservice.
+    - Selecting a cloud provider or storage backend.
+    - Deciding between two architectural patterns (e.g., REST vs. GraphQL).
+  - **Prompt:** *"This task can be implemented in [Option A] or [Option B]. Which would you prefer, or should I provide a recommendation?"*
+
+### 📝 Documentation Updates
+- **Mandatory Post-Refactor Documentation:**
+  - After completing any **large chane** (e.g., adding a new tool or feature, migrating a service from Node.js to Go, restructuring the `infra/` folder, or changing the observability stack), you **MUST**:
+    1. Update the relevant `docs/` files to reflect the new architecture, APIs, or workflows.
+    2. Add or update `.agents/skills/SKILL.md` files if the change introduces new tools or patterns.
+    3. Ensure all `README.md` files in affected directories are up-to-date.
+  - **Prompt:** *"I’ve completed the refactor. Here’s a summary of changes: [list]. I’ll now update the documentation in `docs/` and `.agents/skills/`. Should I proceed, or would you like to review the changes first?"*
+1
 ## 🛠️ Workflows
 Agent-specific standard operating procedures are located in `.agents/workflows/`. Use the `view_file` tool to read them when prompted by the user to perform standard tasks.

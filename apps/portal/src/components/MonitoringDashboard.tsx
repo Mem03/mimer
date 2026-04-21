@@ -1,45 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Database, Server, AlertTriangle, CheckCircle, Info } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts";
+import { Activity, Database, Server, AlertTriangle, Bot, HardDrive } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import VirtualSRE from './VirtualSRE';
 
-type MetricAction = { action: string };
+import { WORKSPACE_CONFIG, PLATFORM_CONFIG } from "@/lib/config";
+
 type MetricItem = {
   name: string;
-  value: string;
-  status: "HEALTHY" | "WARNING" | "CRITICAL";
-  actions: MetricAction[];
+  usage: string;
+  limit: string;
+  trend_15m?: string;
+  restarts?: number;
+  cpu_throttled?: string;
+  network_receive?: string;
 };
+
 type MetricsResponse = {
   type: string;
   metrics: MetricItem[];
 };
 
+const parseNumber = (str: string) => {
+  if (!str || str === "Unlimited" || str === "Unknown" || str === "N/A" || str.includes("Unmeasured")) return 0;
+  return parseFloat(str.replace(/[^0-9.-]+/g, ""));
+};
+
+// Helper to translate raw Kubernetes PVC names into Platform Engineering concepts
+const getVolumePurpose = (pvcName: string) => {
+  if (pvcName.includes("minio")) return "Lakehouse Object Store";
+  if (pvcName.includes("claim-")) return "User Workspace (Jupyter)";
+  if (pvcName.includes("hub-db")) return "JupyterHub System State";
+  return "Unknown Allocation";
+};
+
 export default function MonitoringDashboard() {
-  const [memoryPressure, setMemoryPressure] = useState<MetricItem[]>([]);
-  const [storageGrowth, setStorageGrowth] = useState<MetricItem[]>([]);
-  const [efficiency, setEfficiency] = useState<MetricItem[]>([]);
+  const [memoryData, setMemoryData] = useState<MetricItem[]>([]);
+  const [storageData, setStorageData] = useState<MetricItem[]>([]);
+  const [ephemeralData, setEphemeralData] = useState<MetricItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchMetrics() {
       try {
         const fetchAPI = async (type: string) => {
-          const res = await fetch(`http://localhost:8081/api/metrics?type=${type}`);
+          const res = await fetch(`${PLATFORM_CONFIG.metricsApiUrl}/api/metrics?type=${type}`);
+          if (!res.ok) throw new Error("Network response was not ok");
           const data: MetricsResponse = await res.json();
-          return data.metrics;
+          return data.metrics || [];
         };
 
-        const [mem, storage, eff] = await Promise.all([
+        const [mem, storage, ephemeral] = await Promise.all([
           fetchAPI("memory_pressure"),
           fetchAPI("storage_growth"),
-          fetchAPI("efficiency"),
+          fetchAPI("ephemeral_storage"),
         ]);
 
-        setMemoryPressure(mem);
-        setStorageGrowth(storage);
-        setEfficiency(eff);
+        setMemoryData(mem);
+        setStorageData(storage);
+        setEphemeralData(ephemeral);
       } catch (error) {
         console.error("Failed to fetch metrics", error);
       } finally {
@@ -48,138 +68,230 @@ export default function MonitoringDashboard() {
     }
 
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 30000); // 30s refresh
+    const interval = setInterval(fetchMetrics, 15000); 
     return () => clearInterval(interval);
   }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12 text-brand-text">
-        <Activity className="w-8 h-8 animate-pulse text-brand-primary" />
-        <span className="ml-3 font-medium tracking-wide">Gathering telemetry...</span>
+      <div className="flex flex-col items-center justify-center p-24 text-slate-500">
+        <Activity className="w-10 h-10 animate-pulse text-blue-500 mb-4" />
+        <span className="font-medium tracking-wide">Syncing with K8s Telemetry...</span>
       </div>
     );
   }
 
-  // Formatting for Recharts
-  const chartData = memoryPressure.map(m => ({
-    name: m.name.replace("jupyter-mimer-user-", ""),
-    usage: Number(m.value.replace("%", "")),
-    status: m.status
-  }));
+  const chartData = memoryData.map(m => {
+    const usageNum = parseNumber(m.usage);
+    const limitNum = parseNumber(m.limit);
+    let statusColor = "#3B82F6"; 
+    if (limitNum > 0) {
+      const percent = usageNum / limitNum;
+      if (percent > 0.9) statusColor = "#EF4444"; 
+      else if (percent > 0.75) statusColor = "#F59E0B"; 
+    }
+    if ((m.restarts || 0) > 0) statusColor = "#EF4444"; 
+    
+    return {
+      name: m.name.replace("jupyter-", "").replace("-", " "), 
+      Usage: usageNum,
+      Limit: limitNum,
+      fill: statusColor
+    };
+  });
+
+  const totalEphemeralKB = ephemeralData.reduce((acc, curr) => acc + parseNumber(curr.usage), 0);
+  
+  // Platform Engineer Metric: Calculate total provisioned hard drive space across the cluster
+  const totalProvisionedStorageGB = storageData.reduce((acc, curr) => acc + parseNumber(curr.limit), 0);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Memory Pressure Overview */}
-        <div className="bg-white/40 backdrop-blur-md border border-brand-border rounded-xl p-5 shadow-sm transform transition hover:-translate-y-1 hover:shadow-md cursor-default">
-          <div className="flex items-center gap-3 mb-2">
-            <Server className="text-amber-500 w-5 h-5 flex-shrink-0" />
-            <h3 className="font-medium text-brand-dark">Compute Stress</h3>
-          </div>
-          <p className="text-3xl font-semibold text-brand-dark mt-2">
-            {memoryPressure.filter(m => m.status !== "HEALTHY").length}
-          </p>
-          <p className="text-xs text-brand-text mt-1">Pods requiring attention</p>
-        </div>
-
-        {/* Storage Growth Overview */}
-        <div className="bg-white/40 backdrop-blur-md border border-brand-border rounded-xl p-5 shadow-sm transform transition hover:-translate-y-1 hover:shadow-md cursor-default">
-          <div className="flex items-center gap-3 mb-2">
-            <Database className="text-blue-500 w-5 h-5 flex-shrink-0" />
-            <h3 className="font-medium text-brand-dark">Storage Growth</h3>
-          </div>
-          <p className="text-3xl font-semibold text-brand-dark mt-2">
-            {storageGrowth[0]?.value || "0GB"}
-          </p>
-          <p className="text-xs text-brand-text mt-1">Total capacity mapped</p>
-        </div>
-
-        {/* Efficiency Overview */}
-        <div className="bg-white/40 backdrop-blur-md border border-brand-border rounded-xl p-5 shadow-sm transform transition hover:-translate-y-1 hover:shadow-md cursor-default">
-          <div className="flex items-center gap-3 mb-2">
-            <Activity className="text-green-500 w-5 h-5 flex-shrink-0" />
-            <h3 className="font-medium text-brand-dark">Cluster Efficiency</h3>
-          </div>
-          <p className="text-3xl font-semibold text-brand-dark mt-2">
-            {efficiency[0]?.value || "100%"}
-          </p>
-          <p className="text-xs text-brand-text mt-1">Allocated vs Actual</p>
+      
+      {/* 1. Updated Header without the "Standby" pill */}
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Cluster Telemetry</h2>
+          <p className="text-sm text-slate-500">Live data from VictoriaMetrics</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart View */}
-        <div className="bg-white border border-brand-border rounded-xl shadow-sm flex flex-col pt-4">
-          <div className="px-5 pb-4">
-            <h3 className="font-semibold text-brand-dark">Memory Pressure by Pod</h3>
-            <p className="text-xs text-brand-text mt-1">Real-time working set bytes vs limit</p>
+      {/* 2. INJECT THE AI AGENT HERE */}
+      <VirtualSRE />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <Server className="text-blue-500 w-5 h-5" />
+            <h3 className="font-medium text-slate-800">Compute Pods</h3>
           </div>
-          <div className="p-5 flex-1 min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
-                <Tooltip 
-                  cursor={{ fill: 'transparent' }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <ReferenceLine y={80} stroke="#F59E0B" strokeDasharray="3 3" />
-                <ReferenceLine y={95} stroke="#EF4444" strokeDasharray="3 3" />
-                <Bar dataKey="usage" radius={[4, 4, 0, 0]}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.status === 'CRITICAL' ? '#EF4444' : entry.status === 'WARNING' ? '#F59E0B' : '#3B82F6'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <p className="text-3xl font-semibold text-slate-900 mt-2">{memoryData.length}</p>
         </div>
 
-        {/* AI Agent Actionable Suggestions */}
-        <div className="bg-white border border-brand-border rounded-xl shadow-sm flex flex-col pt-4">
-          <div className="px-5 pb-4">
-            <h3 className="font-semibold text-brand-dark">AI Orchestrator Advisory</h3>
-            <p className="text-xs text-brand-text mt-1">Automatically mapped actions from the Metrics API</p>
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertTriangle className="text-amber-500 w-5 h-5" />
+            <h3 className="font-medium text-slate-800">Restarts</h3>
           </div>
-          <div className="p-0 overflow-y-auto flex-1 max-h-[350px]">
-            <ul className="divide-y divide-brand-border">
-              {[...memoryPressure, ...storageGrowth, ...efficiency].filter(m => m.actions && m.actions.length > 0).map((metric, idx) => (
-                <li key={idx} className="p-5 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {metric.status === 'CRITICAL' ? (
-                        <AlertTriangle className="text-red-500 w-4 h-4" />
-                      ) : metric.status === 'WARNING' ? (
-                        <Info className="text-amber-500 w-4 h-4" />
+          <p className="text-3xl font-semibold text-slate-900 mt-2">
+            {memoryData.reduce((acc, curr) => acc + (curr.restarts || 0), 0)}
+          </p>
+        </div>
+
+        {/* Updated to show total GB capacity instead of just "3 PVCs" */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <Database className="text-purple-500 w-5 h-5" />
+            <h3 className="font-medium text-slate-800">Persistent Storage</h3>
+          </div>
+          <p className="text-3xl font-semibold text-slate-900 mt-2">{totalProvisionedStorageGB.toFixed(0)} GB</p>
+          <p className="text-xs text-slate-500 mt-1">Across {storageData.length} volumes</p>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <HardDrive className="text-emerald-500 w-5 h-5" />
+            <h3 className="font-medium text-slate-800">Ephemeral Used</h3>
+          </div>
+          <p className="text-3xl font-semibold text-slate-900 mt-2">{totalEphemeralKB.toFixed(2)} KB</p>
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col pt-4">
+        <div className="px-5 pb-4 border-b border-slate-50">
+          <h3 className="font-semibold text-slate-800">Memory Allocation (MB)</h3>
+          <p className="text-xs text-slate-500 mt-1">Real-time working set bytes vs limit</p>
+        </div>
+        <div className="p-5 h-[350px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: '#64748B' }} axisLine={false} tickLine={false} />
+              <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}/>
+              <Bar dataKey="Usage" radius={[4, 4, 0, 0]} maxBarSize={80}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+          <h3 className="font-semibold text-slate-800">Active Compute Directory</h3>
+          <p className="text-xs text-slate-500 mt-1">Detailed metrics for all running kernels</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-5 py-3 font-medium">Pod Name</th>
+                <th className="px-5 py-3 font-medium">Memory Usage</th>
+                <th className="px-5 py-3 font-medium">Memory Limit</th>
+                <th className="px-5 py-3 font-medium text-emerald-700 bg-emerald-50">Local Disk (Ephemeral)</th>
+                <th className="px-5 py-3 font-medium">15m Velocity</th>
+                <th className="px-5 py-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {memoryData.map((pod) => {
+                const podEphemeral = ephemeralData.find(e => e.name === pod.name)?.usage || "0.00 KB";
+                return (
+                  <tr key={pod.name} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-4 font-medium text-slate-800">{pod.name}</td>
+                    <td className="px-5 py-4 font-mono text-slate-600">{pod.usage}</td>
+                    <td className="px-5 py-4 font-mono text-slate-600">{pod.limit}</td>
+                    <td className="px-5 py-4 font-mono font-medium text-emerald-600 bg-emerald-50/30">
+                      {podEphemeral}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`font-mono px-2 py-1 rounded text-xs ${pod.trend_15m?.includes('-') ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {pod.trend_15m || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      {(pod.restarts || 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-100">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                          Crashing ({pod.restarts})
+                        </span>
                       ) : (
-                        <CheckCircle className="text-green-500 w-4 h-4" />
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Healthy
+                        </span>
                       )}
-                      <span className="font-medium text-sm text-brand-dark">{metric.name}</span>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
-                      metric.status === 'CRITICAL' ? 'bg-red-50 text-red-700 border border-red-200' :
-                      metric.status === 'WARNING' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                      'bg-green-50 text-green-700 border border-green-200'
-                    }`}>
-                      {metric.value}
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {metric.actions.map((act, i) => (
-                      <div key={i} className="flex gap-2 text-sm text-brand-text items-center bg-white border border-slate-200 shadow-sm rounded px-3 py-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 block flex-shrink-0"></span>
-                        {act.action}
-                      </div>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {memoryData.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-slate-500 italic">
+                    No active compute pods found in the cluster.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* NEW: Platform Engineer Storage Directory */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mt-6">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-slate-800">Persistent Volume Directory</h3>
+            <p className="text-xs text-slate-500 mt-1">Platform-level durability and capacity allocation</p>
+          </div>
+          <Database className="w-5 h-5 text-purple-500 opacity-50" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+              <tr>
+                <th className="px-5 py-3 font-medium">Volume Claim (PVC)</th>
+                <th className="px-5 py-3 font-medium">Platform Purpose</th>
+                <th className="px-5 py-3 font-medium text-purple-700 bg-purple-50">Live Usage</th>
+                <th className="px-5 py-3 font-medium">Provisioned Capacity</th>
+                <th className="px-5 py-3 font-medium">Health</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {storageData.map((vol) => (
+                <tr key={vol.name} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-5 py-4 font-mono text-slate-800 text-xs">{vol.name}</td>
+                  <td className="px-5 py-4 font-medium text-slate-700">{getVolumePurpose(vol.name)}</td>
+                  
+                  {/* Highlight Live Usage - Fallback cleanly if Minikube doesn't provide it */}
+                  <td className="px-5 py-4 font-mono font-medium text-purple-700 bg-purple-50/30">
+                    {vol.usage}
+                  </td>
+                  
+                  <td className="px-5 py-4 font-mono text-slate-600">{vol.limit}</td>
+                  <td className="px-5 py-4">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Bound
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {storageData.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500 italic">
+                    No persistent volumes detected.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }

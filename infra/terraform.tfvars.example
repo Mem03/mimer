@@ -1,0 +1,14 @@
+# ==========================================
+# Secret/Sensitive Variables
+# Copy this file to 'terraform.tfvars' and update the values.
+# ==========================================
+
+# The password used to log into the JupyterHub environment
+jupyter_dummy_password = "mimer2026"
+
+# MinIO Credentials
+minio_access_key = "admin"
+minio_secret_key = "minio123"
+
+# Password for Grafana UI
+grafana_admin_password = "admin"

@@ -1,56 +1,60 @@
-.PHONY: up stop destroy tunnel ui sync-env dev
+.PHONY: up stop destroy tunnel ui sync-env dev build-api test-api
 
-# 1. Start Infrastructure
+# 1. Start Infrastructure (Updated!)
 up:
 	minikube start
+	minikube addons enable ingress # Ensure the K8s front-door is open
+	@make build-api # Must build the image BEFORE terraform apply!
 	cd infra && terraform init && terraform apply -auto-approve
 	@make sync-env
 	@echo "✨ Infrastructure is UP and UI is synced."
 
-# 2. Sync Terraform outputs to Next.js .env
-# This assumes you have 'outputs' defined in your terraform code
+test-api:
+	@echo "🧪 Running Go Metrics API tests..."
+	cd apps/metrics-api && go test -v ./...
+
+# Updated Build Command: Test MUST pass before building
+build-api: test-api
+	@echo "🐳 Building Go Metrics API image inside Minikube..."
+	@eval $$(minikube docker-env) && docker build -t mimer-metrics-api:latest ./apps/metrics-api/
+
+# 3. Sync Terraform outputs to Next.js .env
 sync-env:
-	@echo "🔄 Syncing infra..."
+	@echo "🔄 Syncing infra config and secrets to Portal..."
 	@echo "NEXT_PUBLIC_MINIO_URL=$(shell cd infra && terraform output -raw minio_external_url)" > apps/portal/.env.local
 	@echo "NEXT_PUBLIC_VM_URL=$(shell cd infra && terraform output -raw vm_external_url)" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_JUPYTER_URL=$(shell cd infra && terraform output -raw jupyter_external_url)" >> apps/portal/.env.local
-	@echo "NEXT_PUBLIC_MINIO_ACCESS_KEY=admin" >> apps/portal/.env.local
-	@echo "NEXT_PUBLIC_MINIO_SECRET_KEY=minio123" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_METRICS_API_URL=$(shell cd infra && terraform output -raw metrics_api_external_url)" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_MINIO_ACCESS_KEY=$(shell cd infra && terraform output -raw minio_access_key)" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_MINIO_SECRET_KEY=$(shell cd infra && terraform output -raw minio_secret_key)" >> apps/portal/.env.local
+	@echo "JUPYTER_PASSWORD=$(shell cd infra && terraform output -raw jupyter_password)" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_MINIO_USE_SSL=false" >> apps/portal/.env.local
-	
-# 3. Smart Tunneling (Kills old tunnels first to save RAM)
+    
+# 4. Smart Tunneling (Silently runs in the background, no sudo needed)
 tunnel:
 	@echo "🔌 Resetting Tunnels..."
 	@pkill -f "port-forward" || true
+	@kubectl port-forward -n mimer svc/metrics-api-service 8081:8081 > /dev/null 2>&1 &
 	@kubectl port-forward -n mimer svc/proxy-public 8080:80 > /dev/null 2>&1 &
 	@kubectl port-forward -n mimer svc/minio 9000:9000 > /dev/null 2>&1 &
 	@kubectl port-forward -n monitoring svc/vmsingle-vm-stack-victoria-metrics-k8s-stack 8428:8429 > /dev/null 2>&1 &
-	@echo "✅ Tunnels active: Jupyter (8080), MinIO UI (9001), MinIO API (9000)"
+	@echo "✅ Tunnels active: Go API (8081), Jupyter (8080), MinIO (9000/9001)"
 
-# 4. Start the Go Metrics API
-api:
-	@echo "🚀 Starting Metrics API on port 8081..."
-	@cd apps/metrics-api && /opt/homebrew/bin/go run main.go &
-
-# 5. Start the Next.js Portal
+# 5. Start the Next.js Portal (Runs in the foreground)
 ui:
+	@echo "💻 Starting Next.js portal..."
 	cd apps/portal && npm run dev
 
 # 6. Combined Dev Mode (The 'I want to work' command)
-# This starts the UI, API, and ensures tunnels are open
-dev:
-	@make tunnel
-	@make api
-	@make ui
+dev: tunnel ui
 
-# 7. Maintenance (Stops minikube and kills tunnels)
+# 7. Maintenance (Removed the obsolete Go pkill commands)
 stop:
 	@pkill -f "port-forward" || true
-	@pkill -f "go run main.go" || true
-	@pkill -f "metrics-api" || true
+	@pkill -f "minikube tunnel" || true
 	minikube stop
 
-# 8. Cleanup (Destroys infra and deletes minikube cluster)
+# 8. Cleanup 
 destroy:
 	cd infra && terraform destroy -auto-approve
 	minikube delete
