@@ -42,7 +42,7 @@ export async function configureS3(db: duckdb.AsyncDuckDB) {
         await conn.query(`
             CREATE SECRET (
                 TYPE S3,
-                KEY_ID '${process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY || 'admin'}',
+                KEY_ID '${process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY}',
                 SECRET '${process.env.NEXT_PUBLIC_MINIO_SECRET_KEY}',
                 ENDPOINT '${cleanEndpoint}',
                 URL_STYLE 'path',

@@ -1,4 +1,4 @@
-.PHONY: up stop destroy tunnel ui sync-env dev build-api
+.PHONY: up stop destroy tunnel ui sync-env dev build-api test-api
 
 # 1. Start Infrastructure (Updated!)
 up:
@@ -9,8 +9,12 @@ up:
 	@make sync-env
 	@echo "✨ Infrastructure is UP and UI is synced."
 
-# 2. Build the Go API inside Minikube
-build-api:
+test-api:
+	@echo "🧪 Running Go Metrics API tests..."
+	cd apps/metrics-api && go test -v ./...
+
+# Updated Build Command: Test MUST pass before building
+build-api: test-api
 	@echo "🐳 Building Go Metrics API image inside Minikube..."
 	@eval $$(minikube docker-env) && docker build -t mimer-metrics-api:latest ./apps/metrics-api/
 

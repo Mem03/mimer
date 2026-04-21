@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Database, Server, AlertTriangle, Bot, HardDrive } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import VirtualSRE from './VirtualSRE';
 
 import { WORKSPACE_CONFIG, PLATFORM_CONFIG } from "@/lib/config";
 
@@ -106,16 +107,17 @@ export default function MonitoringDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
+      
+      {/* 1. Updated Header without the "Standby" pill */}
+      <div className="flex justify-between items-center mb-2">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Cluster Telemetry</h2>
           <p className="text-sm text-slate-500">Live data from VictoriaMetrics</p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
-          <Bot className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-medium text-slate-500">AI Agent: Standby</span>
-        </div>
       </div>
+
+      {/* 2. INJECT THE AI AGENT HERE */}
+      <VirtualSRE />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">

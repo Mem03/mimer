@@ -16,8 +16,8 @@ const s3Client = new S3Client({
   region: process.env.MINIO_REGION || "us-east-1", 
   
   credentials: {
-    accessKeyId: process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY || "admin",
-    secretAccessKey: process.env.NEXT_PUBLIC_MINIO_SECRET_KEY || "minio123",
+    accessKeyId: process.env.NEXT_PUBLIC_MINIO_ACCESS_KEY!,
+    secretAccessKey: process.env.NEXT_PUBLIC_MINIO_SECRET_KEY!,
   },
   
   // Convert the string from .env to a boolean for the SDK

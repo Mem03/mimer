@@ -160,6 +160,59 @@ func handleMetrics(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 
+	case "sre":
+		// SRE: Virtual Site Reliability Engineer - System health analysis
+		// Fetch key reliability indicators for user-facing pods (Jupyter + MinIO)
+		restartsMap := fetchMetricMap(`sum(kube_pod_container_status_restarts_total{namespace="mimer", pod=~"jupyter-.*|minio-.*"}) by (pod)`, "pod")
+		memoryUsageMap := fetchMetricMap(`sum(container_memory_usage_bytes{namespace="mimer", pod=~"jupyter-.*|minio-.*"}) by (pod)`, "pod")
+		memoryLimitMap := fetchMetricMap(`sum(container_spec_memory_limit_bytes{namespace="mimer", pod=~"jupyter-.*|minio-.*"}) by (pod)`, "pod")
+		cpuThrottleMap := fetchMetricMap(`sum(rate(container_cpu_cfs_throttled_seconds_total{namespace="mimer", pod=~"jupyter-.*|minio-.*"}[5m])) by (pod)`, "pod")
+		networkRxMap := fetchMetricMap(`sum(rate(container_network_receive_bytes_total{namespace="mimer", pod=~"jupyter-.*|minio-.*"}[5m])) by (pod)`, "pod")
+		memoryTrendMap := fetchMetricMap(`delta(container_memory_usage_bytes{namespace="mimer", pod=~"jupyter-.*|minio-.*"}[15m]) by (pod)`, "pod")
+
+		for podName := range restartsMap {
+			usageBytes := memoryUsageMap[podName]
+			usageMB := usageBytes / (1024 * 1024)
+			limitBytes := memoryLimitMap[podName]
+			limitMB := limitBytes / (1024 * 1024)
+			limitStr := "Unlimited"
+			if limitMB > 0 && limitMB < 9000000 {
+				limitStr = fmt.Sprintf("%.1f MB", limitMB)
+			}
+
+			trendMB := memoryTrendMap[podName] / (1024 * 1024)
+			trendSign := "+"
+			if trendMB < 0 {
+				trendSign = ""
+			}
+
+			throttled := "No"
+			if cpuThrottleMap[podName] > 0.1 {
+				throttled = "Yes"
+			}
+
+			netMBps := networkRxMap[podName] / (1024 * 1024)
+
+			// Determine overall health status
+			status := "Healthy"
+			if restartsMap[podName] > 0 {
+				status = "Degraded"
+			}
+			if throttled == "Yes" {
+				status = "Critical"
+			}
+
+			response.Metrics = append(response.Metrics, MetricItem{
+				Name:         podName,
+				Usage:        fmt.Sprintf("%s (%.1f MB)", status, usageMB),
+				Limit:        limitStr,
+				Trend15m:     fmt.Sprintf("%s%.1f MB", trendSign, trendMB),
+				Restarts:     int(restartsMap[podName]),
+				CPUThrottled: throttled,
+				NetworkRx:    fmt.Sprintf("%.2f MB/s", netMBps),
+			})
+		}
+
 	default:
 		rawQuery := r.URL.Query().Get("query")
 		if rawQuery != "" {
