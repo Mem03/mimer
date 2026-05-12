@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-api
+  namespace: mimer
+  labels:
+    app: code-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-api
+  template:
+    metadata:
+      labels:
+        app: code-api
+    spec:
+      serviceAccountName: code-api
+      containers:
+      - name: code-api
+        image: mimer-platform/code-api:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: PORT
+          value: "8082"
+        - name: MINIO_ENDPOINT
+          value: "minio.mimer.svc.cluster.local:9000"
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: access-key
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: secret-key
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: github-token
+              key: token
+        - name: ALLOWED_ORIGIN
+          value: "http://localhost:3000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-api
+  namespace: mimer
+  labels:
+    app: code-api
+spec:
+  selector:
+    app: code-api
+  ports:
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+  type: ClusterIP

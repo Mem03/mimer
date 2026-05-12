@@ -11,7 +11,9 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1006.0",
     "@duckdb/duckdb-wasm": "^1.33.1-dev20.0",
+    "@jupyterlab/nbformat": "^4.5.7",
     "@kubernetes/client-node": "^1.4.0",
+    "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/postcss": "^4.2.1",
     "apache-arrow": "^21.1.0",
     "lucide-react": "^1.0.1",

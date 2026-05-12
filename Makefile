@@ -17,6 +17,7 @@ sync-env:
 	@echo "NEXT_PUBLIC_MINIO_ACCESS_KEY=admin" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_MINIO_SECRET_KEY=minio123" >> apps/portal/.env.local
 	@echo "NEXT_PUBLIC_MINIO_USE_SSL=false" >> apps/portal/.env.local
+	@echo "NEXT_PUBLIC_CODE_API_URL=http://localhost:8082" >> apps/portal/.env.local
 	
 # 3. Smart Tunneling (Kills old tunnels first to save RAM)
 tunnel:
@@ -29,8 +30,15 @@ tunnel:
 
 # 4. Start the Go Metrics API
 api:
+	@sleep 1
 	@echo "🚀 Starting Metrics API on port 8081..."
 	@cd apps/metrics-api && /opt/homebrew/bin/go run main.go &
+
+# 4.5. Start the Code API
+code-api:
+	@sleep 1
+	@echo "🚀 Starting Code API on port 8082..."
+	@cd apps/code-api && /opt/homebrew/bin/go run main.go &
 
 # 5. Start the Next.js Portal
 ui:
@@ -41,12 +49,16 @@ ui:
 dev:
 	@make tunnel
 	@make api
+	@sleep 1
+	@make code-api
+	@sleep 1
 	@make ui
 
 # 7. Maintenance (Stops minikube and kills tunnels)
 stop:
 	@pkill -f "port-forward" || true
 	@pkill -f "go run main.go" || true
+	@pkill -f "code-api" || true
 	@pkill -f "metrics-api" || true
 	minikube stop
 
